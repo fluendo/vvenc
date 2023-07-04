@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------------
 The copyright in this software is being made available under the Clear BSD
-License, included below. No patent rights, trademark rights and/or 
-other Intellectual Property Rights other than the copyrights concerning 
+License, included below. No patent rights, trademark rights and/or
+other Intellectual Property Rights other than the copyrights concerning
 the Software are granted under this license.
 
 The Clear BSD License
@@ -62,6 +62,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "IStreamIO.h"
 #include "ParseArg.h"
 #include "YuvFileIO.h"
+
+#if ENABLE_SPATIAL_SCALABLE
+#include <memory>
+#endif
 
 #define MACRO_TO_STRING_HELPER(val) #val
 #define MACRO_TO_STRING(val) MACRO_TO_STRING_HELPER(val)
@@ -422,7 +426,7 @@ public:
   std::string  m_additionalSettings;                           ///< set additional settings (always parsed and set after other params are set)
                                                                ///< options must be defined as tuple key=value, entries must be separated by space' ' or colon ':'
                                                                ///< values that are not arbitrary must be quoted "\"values\""
-                                                               ///< e.b. "bitrate=1000000 passes=1 QpInValCb=\"17 22 34 42\"" 
+                                                               ///< e.b. "bitrate=1000000 passes=1 QpInValCb=\"17 22 34 42\""
   std::string  m_logoFileName;                                 ///< logo overlay file
 private:
   const bool   m_easyMode                      = false;        ///< internal state flag, if expert or easy mode
@@ -532,6 +536,12 @@ int parse( int argc, char* argv[], vvenc_config* c, std::ostream& rcOstr )
   IStreamToArr<char>                toTraceFile                   ( &c->m_traceFile[0], VVENC_MAX_STRING_LEN  );
   IStreamToArr<char>                toSummaryOutFilename          ( &c->m_summaryOutFilename[0], VVENC_MAX_STRING_LEN  );
   IStreamToArr<char>                toSummaryPicFilenameBase      ( &c->m_summaryPicFilenameBase[0], VVENC_MAX_STRING_LEN  );
+#if ENABLE_SPATIAL_SCALABLE
+  std::string predDirectionArray;
+  std::string refLayerIdxStr[VVENC_MAX_VPS_LAYERS];
+  std::string olsOutputLayerStr[VVENC_MAX_VPS_LAYERS];
+  std::string maxTidILRefPicsPlus1Str[VVENC_MAX_VPS_LAYERS];
+#endif
 
   IStreamToFunc<int>                toSaoWithScc                  ( setSAO, this, c, &SaoToIntMap, 0 );
 
@@ -674,6 +684,9 @@ int parse( int argc, char* argv[], vvenc_config* c, std::ostream& rcOstr )
   ("Profile",                                           toProfile,                                           "profile (main_10, main_10_still_picture)")
   ("Level",                                             toLevel,                                             "level limit (1.0, 2.0,2.1, 3.0,3.1, 4.0,4.1, 5.0,5.1,5.2, 6.0,6.1,6.2,6.3, 15.5)")
   ("Tier",                                              toLevelTier,                                         "tier for interpretation of level (main, high)")
+#if ENABLE_SPATIAL_SCALABLE
+  ("MultiLayerEnabledFlag",                             c->m_multiLayerEnabledFlag,                          "bitstream might contain more than one layer")
+#endif
   ;
 
   if( m_easyMode )
@@ -843,7 +856,7 @@ int parse( int argc, char* argv[], vvenc_config* c, std::ostream& rcOstr )
 
     ("TreatAsSubPic",                                   c->m_treatAsSubPic,                                  "Allow generation of subpicture streams. Disable LMCS, AlfTempPred and JCCR")
     ("ExplicitAPSid",                                   c->m_explicitAPSid,                                  "Set ALF APS id")
-    
+
     ("AddGOP32refPics",                                 c->m_addGOP32refPics,                                "Use different QP offsets and reference pictures in GOP structure")
     ("NumRefPics",                                      c->m_numRefPics,                                     "Number of reference pictures in RPL (0: default for RPL, <10: apply for all temporal layers, >=10: each decimal digit specifies the number for a temporal layer, last digit applying to the highest TL)" )
     ("NumRefPicsSCC",                                   c->m_numRefPicsSCC,                                  "Number of reference pictures in RPL for SCC pictures (semantic analogue to NumRefPics, -1: equal to NumRefPics)" )
@@ -994,8 +1007,8 @@ int parse( int argc, char* argv[], vvenc_config* c, std::ostream& rcOstr )
                                                                                                              "bt2020-10, bt2020-12, smpte2084, smpte428, arib-std-b67")
     ;
 
-    opts.setSubSection("Summary options (debugging)");                                                      
-    opts.addOptions()                                                                                       
+    opts.setSubSection("Summary options (debugging)");
+    opts.addOptions()
     ("SummaryOutFilename",                              toSummaryOutFilename,                                "Filename to use for producing summary output file. If empty, do not produce a file.")
     ("SummaryPicFilenameBase",                          toSummaryPicFilenameBase,                            "Base filename to use for producing summary picture output files. The actual filenames used will have I.txt, P.txt and B.txt appended. If empty, do not produce a file.")
     ("SummaryVerboseness",                              c->m_summaryVerboseness,                             "Specifies the level of the verboseness of the text output")
@@ -1050,6 +1063,29 @@ int parse( int argc, char* argv[], vvenc_config* c, std::ostream& rcOstr )
     ("QtbttExtraFast",                                  c->m_qtbttSpeedUp,                                   "Non-VTM compatible QTBTT speed-ups" )
     ("FastTTSplit",                                     c->m_fastTTSplit,                                    "Fast method for TT split" )
     ;
+
+#if ENABLE_SPATIAL_SCALABLE
+    opts.addOptions()
+    ("MaxLayers",                                       c->m_maxLayers,                                      "Max number of layers")
+    //("EnableOperatingPointInformation",                 c->m_OPIEnabled,                                     "Enables writing of Operating Point Information(OPI)")
+    //("MaxTemporalLayer",                                c->m_maxTemporalLayer,                               "Maximum temporal layer to be signalled in OPI")
+    //("TargetOutputLayerSet",                            c->m_targetOlsIdx,                                   "Target output layer set index to be signalled in OPI")
+    ("MaxSublayers",                                    c->m_maxSublayers,                                   "Max number of Sublayers")
+    ("DefaultPtlDpbHrdMaxTidFlag",                      c->m_defaultPtlDpbHrdMaxTidFlag,                     "specifies that the syntax elements vps_ptl_max_tid[ i ], vps_dpb_max_tid[ i ], and vps_hrd_max_tid[ i ] are not present and are inferred to be equal to the default value vps_max_sublayers_minus1")
+    ("AllIndependentLayersFlag",                        c->m_allIndependentLayersFlag,                       "All layers are independent layer")
+    ("AllowablePredDirection",                          predDirectionArray,                                  "prediction directions allowed for i-th temporal layer")
+    ("LayerId%d",                                       c->m_layerId, VVENC_MAX_VPS_LAYERS,                  "Layer ID")
+    ("NumRefLayers%d",                                  c->m_numRefLayers, VVENC_MAX_VPS_LAYERS,             "Number of direct reference layer index of i-th layer")
+    ("RefLayerIdx%d",                                   refLayerIdxStr, VVENC_MAX_VPS_LAYERS,                "Reference layer index(es)")
+    ("EachLayerIsAnOlsFlag",                            c->m_eachLayerIsAnOlsFlag,                           "Each layer is an OLS layer flag")
+    ("OlsModeIdc",                                      c->m_olsModeIdc,                                     "Output layer set mode")
+    ("NumOutputLayerSets",                              c->m_numOutputLayerSets,                             "Number of output layer sets")
+    ("OlsOutputLayer%d",                                olsOutputLayerStr, VVENC_MAX_VPS_LAYERS,             "Output layer index of i-th OLS")
+    ("NumPTLsInVPS",                                    c->m_numPtlsInVps,                                   "Number of profile_tier_level structures in VPS")
+    ("AvoidIntraInDepLayers",                           c->m_avoidIntraInDepLayer,                           "Replaces I pictures in dependent layers with B pictures")
+    ("MaxTidILRefPicsPlusOneLayerId%d",                 maxTidILRefPicsPlus1Str, VVENC_MAX_VPS_LAYERS,       "Maximum temporal ID for inter-layer reference pictures plus 1 of i-th layer, 0 for IRAP only")
+    ;
+#endif
 
     opts.setSubSection("Threading, performance");
     opts.addOptions()
@@ -1139,6 +1175,21 @@ int parse( int argc, char* argv[], vvenc_config* c, std::ostream& rcOstr )
     ;
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  std::unique_ptr<IStreamToEnum<vvencLevel>> levelPtl[VVENC_MAX_NUM_OLSS];
+  for (int i = 0; i < VVENC_MAX_NUM_OLSS; i++)
+  {
+    levelPtl[i] = std::make_unique<IStreamToEnum<vvencLevel>>(&c->m_levelPtl[i], &LevelToEnumMap);
+    std::ostringstream cOSS1;
+    cOSS1 << "LevelPTL" << i;
+    opts.addOptions()(cOSS1.str(), *levelPtl[i]);
+
+    std::ostringstream cOSS2;
+    cOSS2 << "OlsPTLIdx" << i;
+    opts.addOptions()(cOSS2.str(), c->m_olsPtlIdx[i], 0);
+  }
+#endif
+
   //
   // parse command line parameters and read configuration files
   //
@@ -1146,6 +1197,19 @@ int parse( int argc, char* argv[], vvenc_config* c, std::ostream& rcOstr )
   {
     po::ErrorReporter err;
     const std::list<const char*>& argv_unhandled = po::scanArgv( opts, argc, (const char**) argv, err );
+
+#if ENABLE_SPATIAL_SCALABLE
+    strncpy(c->m_predDirectionArray, predDirectionArray.c_str(), VVENC_MAX_STRING_LEN);
+    for (int i = 0; i < VVENC_MAX_VPS_LAYERS; i++) {
+      strncpy(c->m_refLayerIdxStr[i], refLayerIdxStr[i].c_str(), VVENC_MAX_STRING_LEN);
+    }
+    for (int i = 0; i < VVENC_MAX_VPS_LAYERS; i++) {
+      strncpy(c->m_olsOutputLayerStr[i], olsOutputLayerStr[i].c_str(), VVENC_MAX_STRING_LEN);
+    }
+    for (int i = 0; i < VVENC_MAX_VPS_LAYERS; i++) {
+      strncpy(c->m_maxTidILRefPicsPlus1Str[i], maxTidILRefPicsPlus1Str[i].c_str(), VVENC_MAX_STRING_LEN);
+    }
+#endif
 
     if ( do_help || argc == 0 )
     {
@@ -1394,7 +1458,7 @@ virtual std::string getAppConfigAsString( vvenc_config* c, vvencMsgLevel eMsgLev
       if( c->m_inputBitDepth[ 0 ] == 8 )
         inputFmt="yuv420p";
       else if( c->m_inputBitDepth[ 0 ] == 10 )
-        inputFmt= m_packedYUVInput ? "yuv420p10(packed)" : "yuv420p10";       
+        inputFmt= m_packedYUVInput ? "yuv420p10(packed)" : "yuv420p10";
 
       std::stringstream frameCountStr;
       std::stringstream framesStr;
@@ -1407,15 +1471,15 @@ virtual std::string getAppConfigAsString( vvenc_config* c, vvencMsgLevel eMsgLev
         int64_t framesToEncode = (c->m_framesToBeEncoded == 0 || c->m_framesToBeEncoded >= frameCount) ? frameCount : c->m_framesToBeEncoded;
         framesStr << "encode " << framesToEncode << ( framesToEncode > 1 ? " frames " : " frame ");
       }
-      else 
+      else
       {
         framesStr << "encode "  << c->m_framesToBeEncoded << ( c->m_framesToBeEncoded > 1 ? " frames " : " frame ");
       }
 
       if ( m_FrameSkip )
-        framesStr << " skip " << m_FrameSkip << ( m_FrameSkip > 1 ? " frames " : " frame ");         
-        
-      css << loglvl << "Real Format                            : ";      
+        framesStr << " skip " << m_FrameSkip << ( m_FrameSkip > 1 ? " frames " : " frame ");
+
+      css << loglvl << "Real Format                            : ";
       css << c->m_PadSourceWidth - c->m_confWinLeft - c->m_confWinRight << "x" << c->m_PadSourceHeight - c->m_confWinTop - c->m_confWinBottom << "  "
           << inputFmt << "  " << (double)c->m_FrameRate/c->m_FrameScale << " Hz  " << getDynamicRangeStr(c->m_HdrMode) << "  " << frameCountStr.str() << "\n";
       css << loglvl << "Frames                                 : " << framesStr.str() << "\n";
@@ -1685,4 +1749,3 @@ static void setSAO( VVEncAppCfg*, vvenc_config *cfg, int saoVal )
 } // namespace
 
 //! \}
-
