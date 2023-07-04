@@ -13,4 +13,4 @@
 * Gabriel Hege, , Fraunhofer HHI
 * Jens Güther, , Fraunhofer HHI
 * Florian Eisenreich, , Fraunhofer HHI
-* Hossein Pejman, , École de technologie supérieure (ÉTS)
+* Hossein Pejman, , École de technologie supérieure (ÉTS)* Shunsuke Iwamura, @siwamura, NHK

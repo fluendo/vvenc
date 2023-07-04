@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------------
 The copyright in this software is being made available under the Clear BSD
-License, included below. No patent rights, trademark rights and/or 
-other Intellectual Property Rights other than the copyrights concerning 
+License, included below. No patent rights, trademark rights and/or
+other Intellectual Property Rights other than the copyrights concerning
 the Software are granted under this license.
 
 The Clear BSD License
@@ -57,6 +57,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "CommonLib/Nal.h"
 #include "EncHRD.h"
 #include "EncStage.h"
+#if ENABLE_SPATIAL_SCALABLE
+#include "EncLibCommon.h"
+#endif
 
 #include <vector>
 #include <list>
@@ -138,12 +141,24 @@ private:
   EncReshape                m_Reshaper;
   BlkStat                   m_BlkStat;
 
+#if ENABLE_SPATIAL_SCALABLE
+  ParameterSetMap<SPS>&     m_spsMap;
+  ParameterSetMap<PPS>&     m_ppsMap;
+#else
   ParameterSetMap<SPS>      m_spsMap;
   ParameterSetMap<PPS>      m_ppsMap;
+#endif
   EncHRD                    m_EncHRD;
+#if ENABLE_SPATIAL_SCALABLE
+  VPS&                      m_VPS;
+#else
   VPS                       m_VPS;
+#endif
   DCI                       m_DCI;
 
+#if ENABLE_SPATIAL_SCALABLE
+  int*                      m_layerDecPicBuffering;
+#endif
   bool                      m_isPreAnalysis;
   bool                      m_bFirstWrite;
   bool                      m_bRefreshPending;
@@ -169,8 +184,17 @@ private:
   std::vector<int>          m_globalCtuQpVector;
   bool                      m_forceSCC;
 
+#if ENABLE_SPATIAL_SCALABLE
+  uint32_t                  m_layerId;
+  Picture*                  m_scaledRefPic[MAX_NUM_REF] = {};
+#endif
+
 public:
+#if ENABLE_SPATIAL_SCALABLE
+  EncGOP( MsgLog& msglog, EncLibCommonStage& encLibCommonStage, uint32_t layerId );
+#else
   EncGOP( MsgLog& msglog );
+#endif
   virtual ~EncGOP();
 
   void setRecYUVBufferCallback( void* ctx, std::function<void( void*, vvencYUVBuffer* )> func );
@@ -178,7 +202,11 @@ public:
   const EncReshape& getReshaper() const { return m_Reshaper; }
 
   void init               ( const VVEncCfg& encCfg, const GOPCfg* gopCfg, RateCtrl& rateCtrl, NoMallocThreadPool* threadPool, bool isPreAnalysis );
+#if ENABLE_SPATIAL_SCALABLE
+  void printOutSummary    ( const bool printMSEBasedSNR, const bool printSequenceMSE, const bool printHexPsnr, const int layerId );
+#else
   void printOutSummary    ( const bool printMSEBasedSNR, const bool printSequenceMSE, const bool printHexPsnr );
+#endif
   void getParameterSets   ( AccessUnitList& accessUnit );
 
 protected:
@@ -191,9 +219,12 @@ private:
   void xProcessPictures               ( AccessUnitList& auList, PicList& doneList );
   void xEncodePicture                 ( Picture* pic, EncPicture* picEncoder );
   void xOutputRecYuv                  ( const PicList& picList );
-  void xReleasePictures               ( const PicList& picList, PicList& freeList );
+  void xReleasePictures               ( const PicList& picList, PicList& freeList, PicList& doneList );
 
   void xInitVPS                       ( VPS &vps ) const;
+#if ENABLE_SPATIAL_SCALABLE
+  void xInitVPS                       ( const SPS& sps, VPS& vps ) const; ///< initialize VPS from SPS
+#endif
   void xInitDCI                       ( DCI &dci, const SPS &sps, const int dciId ) const;
   void xInitConstraintInfo            ( ConstraintInfo &ci ) const;
   void xInitSPS                       ( SPS &sps ) const;
@@ -243,7 +274,7 @@ private:
   inline bool xLockStepPicsFinished   ()
   {
     std::lock_guard<std::mutex> lock( m_gopEncMutex );
-    return ( int ) m_freePicEncoderList.size() >= std::max(1, m_pcEncCfg->m_maxParallelFrames); 
+    return ( int ) m_freePicEncoderList.size() >= std::max(1, m_pcEncCfg->m_maxParallelFrames);
   }
   void xForceScc                      ( Picture& pic );
 
@@ -252,4 +283,3 @@ private:
 } // namespace vvenc
 
 //! \}
-

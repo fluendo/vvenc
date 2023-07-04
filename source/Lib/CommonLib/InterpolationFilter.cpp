@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------------
 The copyright in this software is being made available under the Clear BSD
-License, included below. No patent rights, trademark rights and/or 
-other Intellectual Property Rights other than the copyrights concerning 
+License, included below. No patent rights, trademark rights and/or
+other Intellectual Property Rights other than the copyrights concerning
 the Software are granted under this license.
 
 The Clear BSD License
@@ -103,6 +103,93 @@ const TFilterCoeff InterpolationFilter::m_lumaFilter[LUMA_INTERPOLATION_FILTER_S
   {  0, 0,   0,  0, 64,   0,  0,  0 },
 };
 
+#if ENABLE_SPATIAL_SCALABLE
+
+// 1.5x
+const TFilterCoeff InterpolationFilter::m_lumaFilterRPR1[LUMA_INTERPOLATION_FILTER_SUB_SAMPLE_POSITIONS][NTAPS_LUMA] =
+{
+  { -1, -5, 17, 42, 17, -5, -1,  0 },
+  {  0, -5, 15, 41, 19, -5, -1,  0 },
+  {  0, -5, 13, 40, 21, -4, -1,  0 },
+  {  0, -5, 11, 39, 24, -4, -2,  1 },
+  {  0, -5,  9, 38, 26, -3, -2,  1 },
+  {  0, -5,  7, 38, 28, -2, -3,  1 },
+  {  1, -5,  5, 36, 30, -1, -3,  1 },
+  {  1, -4,  3, 35, 32,  0, -4,  1 },
+  {  1, -4,  2, 33, 33,  2, -4,  1 },
+  {  1, -4,  0, 32, 35,  3, -4,  1 },
+  {  1, -3, -1, 30, 36,  5, -5,  1 },
+  {  1, -3, -2, 28, 38,  7, -5,  0 },
+  {  1, -2, -3, 26, 38,  9, -5,  0 },
+  {  1, -2, -4, 24, 39, 11, -5,  0 },
+  {  0, -1, -4, 21, 40, 13, -5,  0 },
+  {  0, -1, -5, 19, 41, 15, -5,  0 }
+};
+
+// 2x
+const TFilterCoeff InterpolationFilter::m_lumaFilterRPR2[LUMA_INTERPOLATION_FILTER_SUB_SAMPLE_POSITIONS][NTAPS_LUMA] =
+{
+  { -4,  2, 20, 28, 20,  2, -4,  0 },
+  { -4,  0, 19, 29, 21,  5, -4, -2 },
+  { -4, -1, 18, 29, 22,  6, -4, -2 },
+  { -4, -1, 16, 29, 23,  7, -4, -2 },
+  { -4, -1, 16, 28, 24,  7, -4, -2 },
+  { -4, -1, 14, 28, 25,  8, -4, -2 },
+  { -3, -3, 14, 27, 26,  9, -3, -3 },
+  { -3, -1, 12, 28, 25, 10, -4, -3 },
+  { -3, -3, 11, 27, 27, 11, -3, -3 },
+  { -3, -4, 10, 25, 28, 12, -1, -3 },
+  { -3, -3,  9, 26, 27, 14, -3, -3 },
+  { -2, -4,  8, 25, 28, 14, -1, -4 },
+  { -2, -4,  7, 24, 28, 16, -1, -4 },
+  { -2, -4,  7, 23, 29, 16, -1, -4 },
+  { -2, -4,  6, 22, 29, 18, -1, -4 },
+  { -2, -4,  5, 21, 29, 19,  0, -4 }
+};
+
+// 1.5x
+const TFilterCoeff InterpolationFilter::m_affineLumaFilterRPR1[LUMA_INTERPOLATION_FILTER_SUB_SAMPLE_POSITIONS][NTAPS_LUMA] =
+{
+  {  0, -6, 17, 42, 17, -5, -1,  0 },
+  {  0, -5, 15, 41, 19, -5, -1,  0 },
+  {  0, -5, 13, 40, 21, -4, -1,  0 },
+  {  0, -5, 11, 39, 24, -4, -1,  0 },
+  {  0, -5,  9, 38, 26, -3, -1,  0 },
+  {  0, -5,  7, 38, 28, -2, -2,  0 },
+  {  0, -4,  5, 36, 30, -1, -2,  0 },
+  {  0, -3,  3, 35, 32,  0, -3,  0 },
+  {  0, -3,  2, 33, 33,  2, -3,  0 },
+  {  0, -3,  0, 32, 35,  3, -3,  0 },
+  {  0, -2, -1, 30, 36,  5, -4,  0 },
+  {  0, -2, -2, 28, 38,  7, -5,  0 },
+  {  0, -1, -3, 26, 38,  9, -5,  0 },
+  {  0, -1, -4, 24, 39, 11, -5,  0 },
+  {  0, -1, -4, 21, 40, 13, -5,  0 },
+  {  0, -1, -5, 19, 41, 15, -5,  0 }
+};
+
+// 2x
+const TFilterCoeff InterpolationFilter::m_affineLumaFilterRPR2[LUMA_INTERPOLATION_FILTER_SUB_SAMPLE_POSITIONS][NTAPS_LUMA] =
+{
+  {  0, -2, 20, 28, 20,  2, -4,  0 },
+  {  0, -4, 19, 29, 21,  5, -6,  0 },
+  {  0, -5, 18, 29, 22,  6, -6,  0 },
+  {  0, -5, 16, 29, 23,  7, -6,  0 },
+  {  0, -5, 16, 28, 24,  7, -6,  0 },
+  {  0, -5, 14, 28, 25,  8, -6,  0 },
+  {  0, -6, 14, 27, 26,  9, -6,  0 },
+  {  0, -4, 12, 28, 25, 10, -7,  0 },
+  {  0, -6, 11, 27, 27, 11, -6,  0 },
+  {  0, -7, 10, 25, 28, 12, -4,  0 },
+  {  0, -6,  9, 26, 27, 14, -6,  0 },
+  {  0, -6,  8, 25, 28, 14, -5,  0 },
+  {  0, -6,  7, 24, 28, 16, -5,  0 },
+  {  0, -6,  7, 23, 29, 16, -5,  0 },
+  {  0, -6,  6, 22, 29, 18, -5,  0 },
+  {  0, -6,  5, 21, 29, 19, -4,  0 }
+};
+#endif
+
 const TFilterCoeff InterpolationFilter::m_lumaAltHpelIFilter[NTAPS_LUMA] = {  0, 3, 9, 20, 20, 9, 3, 0 };
 const TFilterCoeff InterpolationFilter::m_chromaFilter[CHROMA_INTERPOLATION_FILTER_SUB_SAMPLE_POSITIONS + 1][NTAPS_CHROMA] =
 {
@@ -140,6 +227,82 @@ const TFilterCoeff InterpolationFilter::m_chromaFilter[CHROMA_INTERPOLATION_FILT
   {  0,  2, 63, -1 },
   {  0,  0, 64,  0 },
 };
+
+#if ENABLE_SPATIAL_SCALABLE
+//1.5x
+const TFilterCoeff InterpolationFilter::m_chromaFilterRPR1[CHROMA_INTERPOLATION_FILTER_SUB_SAMPLE_POSITIONS][NTAPS_CHROMA] =
+{
+  { 12, 40, 12,  0 },
+  { 11, 40, 13,  0 },
+  { 10, 40, 15, -1 },
+  {  9, 40, 16, -1 },
+  {  8, 40, 17, -1 },
+  {  8, 39, 18, -1 },
+  {  7, 39, 19, -1 },
+  {  6, 38, 21, -1 },
+  {  5, 38, 22, -1 },
+  {  4, 38, 23, -1 },
+  {  4, 37, 24, -1 },
+  {  3, 36, 25,  0 },
+  {  3, 35, 26,  0 },
+  {  2, 34, 28,  0 },
+  {  2, 33, 29,  0 },
+  {  1, 33, 30,  0 },
+  {  1, 31, 31,  1 },
+  {  0, 30, 33,  1 },
+  {  0, 29, 33,  2 },
+  {  0, 28, 34,  2 },
+  {  0, 26, 35,  3 },
+  {  0, 25, 36,  3 },
+  { -1, 24, 37,  4 },
+  { -1, 23, 38,  4 },
+  { -1, 22, 38,  5 },
+  { -1, 21, 38,  6 },
+  { -1, 19, 39,  7 },
+  { -1, 18, 39,  8 },
+  { -1, 17, 40,  8 },
+  { -1, 16, 40,  9 },
+  { -1, 15, 40, 10 },
+  {  0, 13, 40, 11 },
+};
+
+//2x
+const TFilterCoeff InterpolationFilter::m_chromaFilterRPR2[CHROMA_INTERPOLATION_FILTER_SUB_SAMPLE_POSITIONS][NTAPS_CHROMA] =
+{
+  { 17, 30, 17,  0 },
+  { 17, 30, 18, -1 },
+  { 16, 30, 18,  0 },
+  { 16, 30, 18,  0 },
+  { 15, 30, 18,  1 },
+  { 14, 30, 18,  2 },
+  { 13, 29, 19,  3 },
+  { 13, 29, 19,  3 },
+  { 12, 29, 20,  3 },
+  { 11, 28, 21,  4 },
+  { 10, 28, 22,  4 },
+  { 10, 27, 22,  5 },
+  {  9, 27, 23,  5 },
+  {  9, 26, 24,  5 },
+  {  8, 26, 24,  6 },
+  {  7, 26, 25,  6 },
+  {  7, 25, 25,  7 },
+  {  6, 25, 26,  7 },
+  {  6, 24, 26,  8 },
+  {  5, 24, 26,  9 },
+  {  5, 23, 27,  9 },
+  {  5, 22, 27, 10 },
+  {  4, 22, 28, 10 },
+  {  4, 21, 28, 11 },
+  {  3, 20, 29, 12 },
+  {  3, 19, 29, 13 },
+  {  3, 19, 29, 13 },
+  {  2, 18, 30, 14 },
+  {  1, 18, 30, 15 },
+  {  0, 18, 30, 16 },
+  {  0, 18, 30, 16 },
+  { -1, 18, 30, 17 }
+};
+#endif
 
 const TFilterCoeff InterpolationFilter::m_bilinearFilterPrec4[LUMA_INTERPOLATION_FILTER_SUB_SAMPLE_POSITIONS][NTAPS_BILINEAR] =
 {
@@ -217,12 +380,12 @@ InterpolationFilter::InterpolationFilter()
   m_filter4x4[0][1] = filterXxY_N8<true , 4>;
   m_filter4x4[1][0] = filterXxY_N4<false, 4>;
   m_filter4x4[1][1] = filterXxY_N4<true , 4>;
-  
+
   m_filter8x8[0][0] = filterXxY_N8<false, 8>;
   m_filter8x8[0][1] = filterXxY_N8<true , 8>;
   m_filter8x8[1][0] = filterXxY_N4<false, 8>;
   m_filter8x8[1][1] = filterXxY_N4<true , 8>;
-  
+
   m_filter16x16[0][0] = filterXxY_N8<false, 16>;
   m_filter16x16[0][1] = filterXxY_N8<true , 16>;
   m_filter16x16[1][0] = filterXxY_N4<false, 16>;
@@ -553,7 +716,11 @@ void InterpolationFilter::filterVer(const ClpRng& clpRng, Pel const *src, int sr
  */
 void InterpolationFilter::filterHor(const ComponentID compID, Pel const *src, int srcStride, Pel* dst, int dstStride, int width, int height, int frac, bool isLast, const ChromaFormat fmt, const ClpRng& clpRng, bool useAltHpelIf, int nFilterIdx, bool biMCForDMVR, int reduceTap)
 {
+#if ENABLE_SPATIAL_SCALABLE
+  if (frac == 0 && nFilterIdx < 2)
+#else
   if( frac == 0 )
+#endif
   {
     if( isLast )
       g_pelBufOP.copyBuffer( ( const char* ) src, srcStride * sizeof( Pel ), ( char* ) dst, dstStride * sizeof( Pel ), width * sizeof( Pel ), height );
@@ -567,6 +734,28 @@ void InterpolationFilter::filterHor(const ComponentID compID, Pel const *src, in
     {
       filterHor<NTAPS_BILINEAR>(clpRng, src, srcStride, dst, dstStride, width, height, isLast, m_bilinearFilterPrec4[frac]);
     }
+#if ENABLE_SPATIAL_SCALABLE
+    else if (nFilterIdx == 2)
+    {
+      filterHor<NTAPS_LUMA>(clpRng, src, srcStride, dst, dstStride, width, height, isLast, m_lumaFilter4x4[frac] );
+    }
+    else if (nFilterIdx == 3)
+    {
+      filterHor<NTAPS_LUMA>(clpRng, src, srcStride, dst, dstStride, width, height, isLast, m_lumaFilterRPR1[frac] );
+    }
+    else if (nFilterIdx == 4)
+    {
+      filterHor<NTAPS_LUMA>(clpRng, src, srcStride, dst, dstStride, width, height, isLast, m_lumaFilterRPR2[frac] );
+    }
+    else if (nFilterIdx == 5)
+    {
+      filterHor<NTAPS_LUMA>(clpRng, src, srcStride, dst, dstStride, width, height, isLast, m_affineLumaFilterRPR1[frac] );
+    }
+    else if (nFilterIdx == 6)
+    {
+      filterHor<NTAPS_LUMA>(clpRng, src, srcStride, dst, dstStride, width, height, isLast, m_affineLumaFilterRPR2[frac] );
+    }
+#endif
     else
     {
       if( reduceTap == 0 || ( useAltHpelIf && frac == 8 ) )
@@ -598,7 +787,22 @@ void InterpolationFilter::filterHor(const ComponentID compID, Pel const *src, in
   {
     const uint32_t csx = getComponentScaleX( compID, fmt );
     CHECK( frac < 0 || csx >= 2 || ( frac << ( 1 - csx ) ) >= CHROMA_INTERPOLATION_FILTER_SUB_SAMPLE_POSITIONS, "Invalid fraction" );
+#if ENABLE_SPATIAL_SCALABLE
+    if (nFilterIdx == 3)
+    {
+      filterHor<NTAPS_CHROMA>(clpRng, src, srcStride, dst, dstStride, width, height, isLast, m_chromaFilterRPR1[frac] );
+    }
+    else if (nFilterIdx == 4)
+    {
+      filterHor<NTAPS_CHROMA>(clpRng, src, srcStride, dst, dstStride, width, height, isLast, m_chromaFilterRPR2[frac] );
+    }
+    else
+    {
+      filterHor<NTAPS_CHROMA>(clpRng, src, srcStride, dst, dstStride, width, height, isLast, m_chromaFilter[frac << (1 - csx)] );
+    }
+#else
     filterHor<NTAPS_CHROMA>( clpRng, src, srcStride, dst, dstStride, width, height, isLast, m_chromaFilter[frac << ( 1 - csx )] );
+#endif
   }
 }
 
@@ -621,7 +825,11 @@ void InterpolationFilter::filterHor(const ComponentID compID, Pel const *src, in
  */
 void InterpolationFilter::filterVer(const ComponentID compID, Pel const *src, int srcStride, Pel* dst, int dstStride, int width, int height, int frac, bool isFirst, bool isLast, const ChromaFormat fmt, const ClpRng& clpRng, bool useAltHpelIf, int nFilterIdx, bool biMCForDMVR, int reduceTap)
 {
+#if ENABLE_SPATIAL_SCALABLE
+  if (frac == 0 && nFilterIdx < 2)
+#else
   if( frac == 0 )
+#endif
   {
     m_filterCopy[isFirst][isLast](clpRng, src, srcStride, dst, dstStride, width, height, biMCForDMVR);
   }
@@ -630,8 +838,30 @@ void InterpolationFilter::filterVer(const ComponentID compID, Pel const *src, in
     CHECK( frac < 0 || frac >= LUMA_INTERPOLATION_FILTER_SUB_SAMPLE_POSITIONS, "Invalid fraction" );
     if (nFilterIdx == 1)
     {
-      filterVer<NTAPS_BILINEAR>(clpRng, src, srcStride, dst, dstStride, width, height, isFirst, isLast, m_bilinearFilterPrec4[frac]);
+      filterVer<NTAPS_BILINEAR>(clpRng, src, srcStride, dst, dstStride, width, height, isFirst, isLast, m_bilinearFilterPrec4[frac] );
     }
+#if ENABLE_SPATIAL_SCALABLE
+    else if (nFilterIdx == 2)
+    {
+      filterVer<NTAPS_LUMA>(clpRng, src, srcStride, dst, dstStride, width, height, isFirst, isLast, m_lumaFilter4x4[frac] );
+    }
+    else if (nFilterIdx == 3)
+    {
+      filterVer<NTAPS_LUMA>(clpRng, src, srcStride, dst, dstStride, width, height, isFirst, isLast, m_lumaFilterRPR1[frac] );
+    }
+    else if (nFilterIdx == 4)
+    {
+      filterVer<NTAPS_LUMA>(clpRng, src, srcStride, dst, dstStride, width, height, isFirst, isLast, m_lumaFilterRPR2[frac] );
+    }
+    else if (nFilterIdx == 5)
+    {
+      filterVer<NTAPS_LUMA>(clpRng, src, srcStride, dst, dstStride, width, height, isFirst, isLast, m_affineLumaFilterRPR1[frac] );
+    }
+    else if (nFilterIdx == 6)
+    {
+      filterVer<NTAPS_LUMA>(clpRng, src, srcStride, dst, dstStride, width, height, isFirst, isLast, m_affineLumaFilterRPR2[frac] );
+    }
+#endif
     else
     {
       if( reduceTap == 0 || ( useAltHpelIf && frac == 8 ) )
@@ -663,7 +893,22 @@ void InterpolationFilter::filterVer(const ComponentID compID, Pel const *src, in
   {
     const uint32_t csy = getComponentScaleY( compID, fmt );
     CHECK( frac < 0 || csy >= 2 || ( frac << ( 1 - csy ) ) >= CHROMA_INTERPOLATION_FILTER_SUB_SAMPLE_POSITIONS, "Invalid fraction" );
+#if ENABLE_SPATIAL_SCALABLE
+    if (nFilterIdx == 3)
+    {
+      filterVer<NTAPS_CHROMA>(clpRng, src, srcStride, dst, dstStride, width, height, isFirst, isLast, m_chromaFilterRPR1[frac] );
+    }
+    else if (nFilterIdx == 4)
+    {
+      filterVer<NTAPS_CHROMA>(clpRng, src, srcStride, dst, dstStride, width, height, isFirst, isLast, m_chromaFilterRPR2[frac] );
+    }
+    else
+    {
+      filterVer<NTAPS_CHROMA>(clpRng, src, srcStride, dst, dstStride, width, height, isFirst, isLast, m_chromaFilter[frac << (1 - csy)] );
+    }
+#else
     filterVer<NTAPS_CHROMA>(clpRng, src, srcStride, dst, dstStride, width, height, isFirst, isLast, m_chromaFilter[frac << (1 - csy)]);
+#endif
   }
 }
 
@@ -684,7 +929,7 @@ void InterpolationFilter::scalarFilterN2_2D( const ClpRng& clpRng, Pel const *sr
 void InterpolationFilter::filter4x4( const ComponentID compID, const Pel* src, int srcStride, Pel* dst, int dstStride, int width, int height, int fracX, int fracY, bool isLast, const ChromaFormat fmt, const ClpRng& clpRng,bool useAltHpelIf/*= false*/,int nFilterIdx /*= 0*/ )
 {
   const int vFilterSize = nFilterIdx == 1 ? 2 : ( isLuma( compID ) ? NTAPS_LUMA : NTAPS_CHROMA );
-  
+
   if( vFilterSize == 8 )
   {
    CHECKD( !isLuma( compID ), "8-tap filter is only allowed for luma!" );
@@ -887,7 +1132,7 @@ void InterpolationFilter::filterXxY_N4( const ClpRng& clpRng, const Pel* src, in
       sum = ( sum + offset1st ) >> shift1st;
 
       if( row >= 0 && row < ( height + 0 ) ) dst[row    ][col] += sum * cV[0];
-      if( row >= 1 && row < ( height + 1 ) ) dst[row - 1][col] += sum * cV[1]; 
+      if( row >= 1 && row < ( height + 1 ) ) dst[row - 1][col] += sum * cV[1];
       if( row >= 2 && row < ( height + 2 ) ) dst[row - 2][col] += sum * cV[2];
 
       if( row >= 3 )
@@ -971,7 +1216,7 @@ void InterpolationFilter::filterXxY_N8( const ClpRng& clpRng, const Pel* src, in
       sum = ( sum + offset1st ) >> shift1st;
 
       if( row >= 0 && row < ( h + 0 ) ) dst[row    ][col] += sum * cV[0];
-      if( row >= 1 && row < ( h + 1 ) ) dst[row - 1][col] += sum * cV[1]; 
+      if( row >= 1 && row < ( h + 1 ) ) dst[row - 1][col] += sum * cV[1];
       if( row >= 2 && row < ( h + 2 ) ) dst[row - 2][col] += sum * cV[2];
       if( row >= 3 && row < ( h + 3 ) ) dst[row - 3][col] += sum * cV[3];
       if( row >= 4 && row < ( h + 4 ) ) dst[row - 4][col] += sum * cV[4];
@@ -1087,4 +1332,3 @@ void InterpolationFilter::initInterpolationFilter( bool enable )
 } // namespace vvenc
 
 //! \}
-
