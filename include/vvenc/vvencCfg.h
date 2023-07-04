@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------------
 The copyright in this software is being made available under the Clear BSD
-License, included below. No patent rights, trademark rights and/or 
-other Intellectual Property Rights other than the copyrights concerning 
+License, included below. No patent rights, trademark rights and/or
+other Intellectual Property Rights other than the copyrights concerning
 the Software are granted under this license.
 
 The Clear BSD License
@@ -44,6 +44,15 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
+
+// ====================================================================================================================
+// Spatial scalable function
+// ====================================================================================================================
+#ifndef ENABLE_SPATIAL_SCALABLE
+#define ENABLE_SPATIAL_SCALABLE                           1
+#endif
+#define DPB_MAX_DEC_PIC_BUFFERING_BUG_FIX            1
+
 
 #include "vvenc/vvencDecl.h"
 
@@ -88,6 +97,10 @@ typedef void (*vvencLoggingCallback)(void*, int, const char*, va_list);
 #define VVENC_DEFAULT_QP                      32     // default base QP
 #define VVENC_AUTO_QP                        -1      // indicates to use default QP, or ignore if RC is used
 #define VVENC_RC_OFF                          0      // indicates rate control is disabled
+#if ENABLE_SPATIAL_SCALABLE
+#define VVENC_MAX_VPS_LAYERS                  64     // max vps layser
+#define VVENC_MAX_NUM_OLSS                    256    // max olss
+#endif
 
 // ====================================================================================================================
 
@@ -215,7 +228,7 @@ typedef enum
   VVENC_HDR_PQ_BT2020,   // HDR10, Dolby + BT.2020
   VVENC_HDR_HLG_BT2020,  // Hybrid Log Gamma + BT.2020
   VVENC_HDR_USER_DEFINED,// user defined HDR mode (to provide old HDR modes, HDR is set individually)
-  VVENC_SDR_BT709,       // SDR BT.709 
+  VVENC_SDR_BT709,       // SDR BT.709
   VVENC_SDR_BT2020,      // SDR BT.2020
   VVENC_SDR_BT470BG      // SDR BT.470 B/G
 }vvencHDRMode;
@@ -426,6 +439,9 @@ typedef struct vvenc_config
   int                 m_inputBitDepth[ 2 ];                                              // bit-depth of input pictures (2d array for luma,chroma)
 
   int                 m_numThreads;                                                      // number of worker threads ( if <0: <720p 4threads, else 8threads (limited to available cores))
+#if ENABLE_SPATIAL_SCALABLE
+  bool                m_multiLayerEnabledFlag;
+#endif
 
   int                 m_QP;                                                              // QP value of key-picture (0-63, default: 32)
   int                 m_RCTargetBitrate;                                                 // target bitrate in bps, (default. 0 (rc disabled))
@@ -434,7 +450,7 @@ typedef struct vvenc_config
 
   // basic config params
 
-  vvencProfile        m_profile;                                                         // profile 
+  vvencProfile        m_profile;                                                         // profile
   vvencTier           m_levelTier;                                                       // Tier to use for interpretation of level (main or high)
   vvencLevel          m_level;                                                           // level limit
 
@@ -444,7 +460,7 @@ typedef struct vvenc_config
   int                 m_GOPSize;                                                         // GOP size of hierarchical structure
 
   int                 m_RCNumPasses;                                                     // number of rc passes (default: -1, if not set and bitrate > 0 2-pass rc will be used)
-  int                 m_RCPass;                                                          // current pass (0,1) for rc (only needed for 2-pass rc) 
+  int                 m_RCPass;                                                          // current pass (0,1) for rc (only needed for 2-pass rc)
   bool                m_cfgUnused1;                                                      // TODO: remove unused memory from configuration
 
   int                 m_internalBitDepth[ 2 ];                                           // bit-depth codec operates at (input/output files will be converted) (2d array for luma,chroma)
@@ -722,6 +738,34 @@ typedef struct vvenc_config
   uint32_t            m_numExpTileRows;                                                  // number of explicitly specified tile rows
   uint32_t            m_numSlicesInPic;                                                  // derived number of rectangular slices in the picture (raster-scan slice specified at slice level)
 
+#if ENABLE_SPATIAL_SCALABLE
+  int                 m_maxLayers;
+  //int                 m_targetOlsIdx;                                                    // NOTE : not supported.
+  //bool                m_OPIEnabled;                                                      // NOTE : not supported. --- enable Operating Point Information (OPI)
+  //int                 m_maxTemporalLayer;                                                // NOTE : not supported.
+  int                 m_layerId[VVENC_MAX_VPS_LAYERS];
+  //int                 m_layerIdx;                                                        // NOTE : not used.
+  int                 m_maxSublayers;
+  bool                m_defaultPtlDpbHrdMaxTidFlag;
+  bool                m_allIndependentLayersFlag;
+  char                m_predDirectionArray[VVENC_MAX_STRING_LEN];
+
+  int                 m_numRefLayers[VVENC_MAX_VPS_LAYERS];
+  char                m_refLayerIdxStr[VVENC_MAX_VPS_LAYERS][VVENC_MAX_STRING_LEN];
+  bool                m_eachLayerIsAnOlsFlag;
+  int                 m_olsModeIdc;
+  int                 m_numOutputLayerSets;
+  char                m_olsOutputLayerStr[VVENC_MAX_VPS_LAYERS][VVENC_MAX_STRING_LEN];
+  bool                m_avoidIntraInDepLayer;
+  char                m_maxTidILRefPicsPlus1Str[VVENC_MAX_VPS_LAYERS][VVENC_MAX_STRING_LEN];
+
+  int                 m_numPtlsInVps;
+
+  //vvencVPSParameters  m_VPSParameters;  // NOTE : This VTM implementation is unused.
+  vvencLevel          m_levelPtl[VVENC_MAX_NUM_OLSS];
+  int                 m_olsPtlIdx[VVENC_MAX_NUM_OLSS];
+#endif
+
   // decode bitstream options
   int                 m_switchPOC;                                                       // dbg poc.
   int                 m_switchDQP;                                                       // switch DQP.
@@ -801,7 +845,7 @@ VVENC_DECL int vvenc_init_default( vvenc_config *cfg, int width, int height, int
  \param[in]  vvenc_config* pointer to vvenc_config struct that contains encoder parameters
  \param[in]  preset enum of used preset (default: VVENC_MEDIUM)
  \retval     int if non-zero an error occurred (see ErrorCodes), otherwise VVENC_OK indicates success.
- \pre        vvenc_config_default() or vvenc_init_default() must be called first 
+ \pre        vvenc_config_default() or vvenc_init_default() must be called first
 */
 VVENC_DECL int vvenc_init_preset( vvenc_config *cfg, vvencPresetMode preset );
 
@@ -823,7 +867,7 @@ VVENC_DECL void vvenc_set_msg_callback( vvenc_config *cfg, void * msgCtx, vvencL
   Is automatically called in vvenc_encoder_open().
  \param[in]  vvenc_config* pointer to vvenc_config struct that contains encoder parameters
   \retval    bool if true an error occurred, otherwise false.
- \pre        vvenc_config_default() or vvenc_init_default() must be called first 
+ \pre        vvenc_config_default() or vvenc_init_default() must be called first
 */
 VVENC_DECL bool vvenc_init_config_parameter( vvenc_config *cfg );
 
@@ -876,7 +920,7 @@ VVENC_DECL bool vvenc_init_config_parameter( vvenc_config *cfg );
   \retval    returns 0 on success, or returns one of the following values:
              VVENC_BAD_VALUE occurs only if it can't even parse the value,
              VVENC_PARAM_INFO occurs when a information should be printed (e.g. help, version)
-  \pre       vvenc_config_default() or vvenc_init_default() must be called first 
+  \pre       vvenc_config_default() or vvenc_init_default() must be called first
 */
 #define VVENC_PARAM_BAD_NAME  (-1)
 #define VVENC_PARAM_BAD_VALUE (-2)
@@ -891,7 +935,7 @@ VVENC_DECL int vvenc_set_param(vvenc_config *cfg, const char *name, const char *
   \param[in]  argc number or arguments in argv string list
   \param[in]  argv list of char* (argv[]); option name must be defined by prefix -- or -
   \retval     returns 0 on success, > 0 if an information was printed (help), -1 on failure.
-  \pre        vvenc_config_default() or vvenc_init_default() must be called first 
+  \pre        vvenc_config_default() or vvenc_init_default() must be called first
 */
 VVENC_DECL int vvenc_set_param_list(vvenc_config *c, int argc, char* argv[] );
 
@@ -900,7 +944,7 @@ VVENC_DECL int vvenc_set_param_list(vvenc_config *c, int argc, char* argv[] );
   \param[in]  vvenc_config* pointer to vvenc_config struct that contains encoder parameters
   \param[in]  eMsgLevel verbosity level
   \retval     const char* encoder configuration as string
-  \pre        vvenc_config_default() or vvenc_init_default() must be called first 
+  \pre        vvenc_config_default() or vvenc_init_default() must be called first
 */
 VVENC_DECL const char* vvenc_get_config_as_string( vvenc_config *cfg, vvencMsgLevel eMsgLevel );
 
@@ -909,5 +953,3 @@ VVENC_DECL const char* vvenc_get_config_as_string( vvenc_config *cfg, vvencMsgLe
 #endif /*__cplusplus */
 
 VVENC_NAMESPACE_END
-
-
