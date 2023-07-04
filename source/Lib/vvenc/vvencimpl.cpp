@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------------
 The copyright in this software is being made available under the Clear BSD
-License, included below. No patent rights, trademark rights and/or 
-other Intellectual Property Rights other than the copyrights concerning 
+License, included below. No patent rights, trademark rights and/or
+other Intellectual Property Rights other than the copyrights concerning
 the Software are granted under this license.
 
 The Clear BSD License
@@ -126,7 +126,11 @@ int VVEncImpl::checkConfig( const vvenc_config& config )
   return VVENC_OK;
 }
 
+#if ENABLE_SPATIAL_SCALABLE
+int VVEncImpl::init( vvenc_config* config, EncLibCommon& encLibCommon, int layerId )
+#else
 int VVEncImpl::init( vvenc_config* config )
+#endif
 {
   if( m_bInitialized ){ return VVENC_ERR_INITIALIZE; }
 
@@ -145,18 +149,26 @@ int VVEncImpl::init( vvenc_config* config )
   }
 
   if( config->m_msgFnc )
-  { 
+  {
     msg.setCallback( config->m_msgCtx, config->m_msgFnc );
   }
-  
+
   // initialize the encoder
+#if ENABLE_SPATIAL_SCALABLE
+  m_pEncLib = new EncLib( msg, encLibCommon );
+#else
   m_pEncLib = new EncLib ( msg );
+#endif
 
 #if HANDLE_EXCEPTION
   try
 #endif
   {
+#if ENABLE_SPATIAL_SCALABLE
+    m_pEncLib->initEncoderLib(m_cVVEncCfg, layerId);
+#else
     m_pEncLib->initEncoderLib( m_cVVEncCfg );
+#endif
   }
 #if HANDLE_EXCEPTION
   catch( std::exception& e )
@@ -251,6 +263,29 @@ int VVEncImpl::setRecYUVBufferCallback( void * ctx, vvencRecYUVBufferCallback ca
   return VVENC_OK;
 }
 
+#if ENABLE_SPATIAL_SCALABLE
+int VVEncImpl::checkChromaFormatAndBitDepth(const std::vector<vvencEncoder*>& encs)
+{
+  std::vector<EncLib*> encLibs;
+  for (const auto& enc : encs) {
+    encLibs.push_back(((VVEncImpl*)enc)->m_pEncLib);
+  }
+#if HANDLE_EXCEPTION
+  try
+  {
+#endif
+    m_pEncLib->checkChromaFormatAndBitDepth(encLibs);
+#if HANDLE_EXCEPTION
+  }
+  catch (std::exception& e)
+  {
+    m_cErrorString = e.what();
+    return VVENC_ERR_UNSPECIFIED;
+  }
+#endif
+  return VVENC_OK;
+}
+#endif
 int VVEncImpl::encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUnit, bool* pbEncodeDone )
 {
   if( !m_bInitialized )                      { return VVENC_ERR_INITIALIZE; }
@@ -394,9 +429,13 @@ int VVEncImpl::encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUni
   }
   else
   {
+#if ENABLE_SPATIAL_SCALABLE
+    if (false)
+#else
     if( bFlush && m_cVVEncCfg.m_RCNumPasses == 2 && m_pEncLib->getCurPass() == 0 )
+#endif
     {
-      // process all remaining pictures of first pass on first flush packet 
+      // process all remaining pictures of first pass on first flush packet
       while ( ! *pbEncodeDone )
       {
 #if HANDLE_EXCEPTION
@@ -412,9 +451,9 @@ int VVEncImpl::encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUni
           m_cErrorString = e.what();
           return VVENC_ERR_UNSPECIFIED;
         }
-#endif 
+#endif
       }
-      m_eState = INTERNAL_STATE_FINALIZED;      
+      m_eState = INTERNAL_STATE_FINALIZED;
     }
   }
 
@@ -836,6 +875,9 @@ std::string VVEncImpl::createEncoderInfoStr()
   std::string cInfoStr;
   cInfoStr  = "Fraunhofer VVC Encoder ver. " VVENC_VERSION;
   cInfoStr += " ";
+#if ENABLE_SPATIAL_SCALABLE
+  cInfoStr += "multi-layer ";
+#endif
   cInfoStr += cssCap.str();
 
   return cInfoStr;
@@ -859,10 +901,10 @@ int VVEncImpl::decodeBitstream( const char* FileName, const char* trcFile, const
 #endif
   {
     ret = tryDecodePicture( &cPicture, -1, filename, ffwdDecoder, nullptr, msg, false, cPicture.poc, false );
-    if( ret )  
-    { 
+    if( ret )
+    {
       msg.log( VVENC_ERROR, "decoding failed\n");
-      return VVENC_ERR_UNSPECIFIED; 
+      return VVENC_ERR_UNSPECIFIED;
     }
   }
 #if HANDLE_EXCEPTION

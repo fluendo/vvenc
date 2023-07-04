@@ -350,6 +350,9 @@ VVENC_DECL void vvenc_config_default(vvenc_config *c )
   c->m_profile                                 = vvencProfile::VVENC_PROFILE_AUTO;
   c->m_levelTier                               = vvencTier::VVENC_TIER_MAIN ;
   c->m_level                                   = vvencLevel::VVENC_LEVEL_AUTO;
+#if ENABLE_SPATIAL_SCALABLE
+  c->m_multiLayerEnabledFlag                   = 0;
+#endif
 
   c->m_IntraPeriod                             = 0;             ///< period of I-slice (random access period)
   c->m_IntraPeriodSec                          = 1;             ///< period of I-slice in seconds (random access period)
@@ -671,11 +674,34 @@ VVENC_DECL void vvenc_config_default(vvenc_config *c )
   c->m_addGOP32refPics                         = false;
   c->m_numRefPics                              = 0;
   c->m_numRefPicsSCC                           = -1;
-  
+
   c->m_FirstPassMode                           = 0;
 
   memset( c->m_reservedFlag, 0, sizeof(c->m_reservedFlag) );
   memset( c->m_reservedDouble, 0, sizeof(c->m_reservedDouble) );
+
+#if ENABLE_SPATIAL_SCALABLE
+  c->m_maxLayers = 1;
+  //c->m_OPIEnabled                              = false;
+  //c->m_maxTemporalLayer                        = 500;
+  //c->m_targetOlsIdx                            = 500;
+  c->m_maxSublayers = 7;
+  c->m_defaultPtlDpbHrdMaxTidFlag = true;
+  c->m_allIndependentLayersFlag = true;
+  memset(c->m_predDirectionArray, 0, VVENC_MAX_STRING_LEN);
+  memset(c->m_layerId, 0, sizeof(c->m_layerId));
+  memset(c->m_numRefLayers, 0, sizeof(c->m_numRefLayers));
+  for (auto& str : c->m_refLayerIdxStr) { memset(str, 0, VVENC_MAX_STRING_LEN); }
+  c->m_eachLayerIsAnOlsFlag = true;
+  c->m_olsModeIdc = 0;
+  c->m_numOutputLayerSets = 1;
+  for (auto& str : c->m_olsOutputLayerStr) { memset(str, 0, VVENC_MAX_STRING_LEN); }
+  c->m_numPtlsInVps = 1;
+  c->m_avoidIntraInDepLayer = true;
+  for (auto& str : c->m_maxTidILRefPicsPlus1Str) { memset(str, 0, VVENC_MAX_STRING_LEN); }
+  for (auto& level : c->m_levelPtl) { level = VVENC_LEVEL_AUTO; }
+  memset(c->m_olsPtlIdx, 0, sizeof(c->m_olsPtlIdx));
+#endif
 
   // init default preset
   vvenc_init_preset( c, vvencPresetMode::VVENC_MEDIUM );
@@ -798,16 +824,39 @@ VVENC_DECL bool vvenc_init_config_parameter( vvenc_config *c )
 
     if (c->m_internChromaFormat==vvencChromaFormat::VVENC_CHROMA_400 || c->m_internChromaFormat==vvencChromaFormat::VVENC_CHROMA_420)
     {
+#if ENABLE_SPATIAL_SCALABLE
+      if (c->m_level == VVENC_LEVEL15_5 && c->m_framesToBeEncoded == 1)
+      {
+        c->m_profile = c->m_maxLayers > 1 ? VVENC_MULTILAYER_MAIN_10_STILL_PICTURE : VVENC_MAIN_10_STILL_PICTURE;
+      }
+      else
+      {
+        c->m_profile = c->m_maxLayers > 1 ? VVENC_MULTILAYER_MAIN_10 : VVENC_MAIN_10;
+      }
+#else
       if (maxBitDepth<=10)
       {
         c->m_profile=vvencProfile::VVENC_MAIN_10;
       }
+#endif
     }
     else if (c->m_internChromaFormat==vvencChromaFormat::VVENC_CHROMA_422 || c->m_internChromaFormat==vvencChromaFormat::VVENC_CHROMA_444)
     {
       if (maxBitDepth<=10)
       {
+#if ENABLE_SPATIAL_SCALABLE
+        if (c->m_level == VVENC_LEVEL15_5 && c->m_framesToBeEncoded == 1)
+        {
+          c->m_profile =
+            c->m_maxLayers > 1 ? VVENC_MULTILAYER_MAIN_10_444_STILL_PICTURE : VVENC_MAIN_10_444_STILL_PICTURE;
+        }
+        else
+        {
+          c->m_profile = c->m_maxLayers > 1 ? VVENC_MULTILAYER_MAIN_10_444 : VVENC_MAIN_10_444;
+        }
+#else
         c->m_profile=vvencProfile::VVENC_MAIN_10_444;
+#endif
       }
     }
 
@@ -919,7 +968,7 @@ VVENC_DECL bool vvenc_init_config_parameter( vvenc_config *c )
     {
       c->m_vuiParametersPresent  = 1;                                    // enable vui only if not explicitly disabled
     }
-  } 
+  }
 
   if( c->m_HdrMode == VVENC_HDR_PQ || c->m_HdrMode == VVENC_HDR_PQ_BT2020 )
   {
@@ -1583,7 +1632,7 @@ VVENC_DECL bool vvenc_init_config_parameter( vvenc_config *c )
   }
 
   //
-  // finalize initialization 
+  // finalize initialization
   //
 
 
@@ -1603,7 +1652,7 @@ VVENC_DECL bool vvenc_init_config_parameter( vvenc_config *c )
   vvenc_checkCharArrayStr( c->m_summaryPicFilenameBase, VVENC_MAX_STRING_LEN);
 
   const int maxTLayer = c->m_picReordering && c->m_GOPSize > 1 ? vvenc::ceilLog2( c->m_GOPSize ) : 0;
-  
+
   if( c->m_deblockLastTLayers > 0 )
   {
     if( maxTLayer > 0 )
@@ -1968,6 +2017,10 @@ static bool checkCfgParameter( vvenc_config *c )
     vvenc_confirmParameter(c, c->m_useAMaxBT,             "Frame parallel processing: AMaxBT is not supported (must be disabled)" );
     vvenc_confirmParameter(c, c->m_cabacInitPresent,      "Frame parallel processing: CabacInitPresent is not supported (must be disabled)" );
     vvenc_confirmParameter(c, c->m_saoEncodingRate > 0.0, "Frame parallel processing: SaoEncodingRate is not supported (must be disabled)" );
+#if ENABLE_SPATIAL_SCALABLE
+    vvenc_confirmParameter(c, c->m_maxLayers > 1,         "Frame parallel processing: MaxLayers > 1 is not supported (must be less than 2)" );
+#endif
+
 #if ENABLE_TRACING
     vvenc_confirmParameter(c, c->m_traceFile[0] != '\0' && c->m_maxParallelFrames > 1 && c->m_numThreads > 1, "Tracing and frame parallel encoding not supported" );
 #endif
@@ -2043,6 +2096,9 @@ static bool checkCfgParameter( vvenc_config *c )
   vvenc_confirmParameter(c, abs(c->m_sliceChromaQpOffsetIntraOrPeriodic[0]  + c->m_chromaCbQpOffset ) > 12, "Intra/periodic Cb QP Offset, when combined with the PPS Cb offset, exceeds supported range (-12 to 12)" );
   vvenc_confirmParameter(c, abs(c->m_sliceChromaQpOffsetIntraOrPeriodic[1]                 ) > 12, "Intra/periodic Cr QP Offset exceeds supported range (-12 to 12)" );
   vvenc_confirmParameter(c, abs(c->m_sliceChromaQpOffsetIntraOrPeriodic[1]  + c->m_chromaCrQpOffset ) > 12, "Intra/periodic Cr QP Offset, when combined with the PPS Cr offset, exceeds supported range (-12 to 12)" );
+#if ENABLE_SPATIAL_SCALABLE
+  vvenc_confirmParameter(c, c->m_maxSublayers < 1 || c->m_maxSublayers > 7, "MaxSublayers must be in range [1..7]");
+#endif
 
   vvenc_confirmParameter(c, c->m_fastLocalDualTreeMode < 0 || c->m_fastLocalDualTreeMode > 2, "FastLocalDualTreeMode must be in range [0..2]" );
 
@@ -2294,7 +2350,7 @@ VVENC_DECL int vvenc_init_default( vvenc_config *c, int width, int height, int f
   c->m_RCTargetBitrate     = targetbitrate;            // target bitrate in bps
 
   c->m_numThreads          = -1;                       // number of worker threads (-1: auto, 0: off, else set worker threads)
-  
+
   iRet = vvenc_init_preset( c, preset );
   return iRet;
 }
@@ -2435,7 +2491,7 @@ VVENC_DECL int vvenc_init_preset( vvenc_config *c, vvencPresetMode preset )
     case vvencPresetMode::VVENC_FASTER:
 
       c->m_FirstPassMode                   = 1;
-      
+
       // motion estimation
       c->m_SearchRange                     = 128;
       c->m_bipredSearchRange               = 1;
@@ -2887,7 +2943,7 @@ VVENC_DECL const char* vvenc_get_config_as_string( vvenc_config *c, vvencMsgLeve
     css << "Rate Control   : ";
   }
 
-  if( eMsgLevel >= VVENC_INFO )        
+  if( eMsgLevel >= VVENC_INFO )
   {
     if ( c->m_RCTargetBitrate > 0 )
     {
@@ -3199,7 +3255,7 @@ VVENC_DECL int vvenc_set_param_list( vvenc_config *c, int argc, char* argv[] )
   int ret =  cVVEncAppCfg.parse( argc, argv, c, cssO );
 
   if( !cssO.str().empty() )
-  {    
+  {
     vvenc::MsgLog msg(c->m_msgCtx,c->m_msgFnc);
     vvencMsgLevel msgLvl = VVENC_INFO;
     if( ret < 0 ) msgLvl = VVENC_ERROR;
@@ -3213,5 +3269,3 @@ VVENC_DECL int vvenc_set_param_list( vvenc_config *c, int argc, char* argv[] )
 
 
 VVENC_NAMESPACE_END
-
-

@@ -372,7 +372,11 @@ int callingOrderInitNoUninit()
     return -1;
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  if( 0 != vvenc_encoder_open( enc, &vvencParams, nullptr, 0 ) )
+#else
   if( 0 != vvenc_encoder_open( enc, &vvencParams ) )
+#endif
   {
     vvenc_encoder_close( enc );
     return -1;
@@ -394,13 +398,21 @@ int callingOrderInitTwice()
     return -1;
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  if( 0 != vvenc_encoder_open( enc, &vvencParams, nullptr, 0 ) )
+#else
   if( 0 != vvenc_encoder_open( enc, &vvencParams ) )
+#endif
   {
     vvenc_encoder_close( enc );
     return -1;
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  if( 0 != vvenc_encoder_open( enc, &vvencParams, nullptr, 0 ) )
+#else
   if( 0 != vvenc_encoder_open( enc, &vvencParams ) )
+#endif
   {
     vvenc_encoder_close( enc );
     return -1;
@@ -459,7 +471,11 @@ int callingOrderRegular()
     return -1;
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  if( 0 != vvenc_encoder_open( enc, &vvencParams, nullptr, 0 ) )
+#else
   if( 0 != vvenc_encoder_open( enc, &vvencParams ) )
+#endif
   {
     vvenc_encoder_close( enc );
     return -1;
@@ -521,7 +537,11 @@ int callingOrderNotRegular()
     return -1;
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  if( 0 != vvenc_encoder_open( enc, &vvencParams, nullptr, 0 ) )
+#else
   if( 0 != vvenc_encoder_open( enc, &vvencParams ) )
+#endif
   {
     vvenc_encoder_close( enc );
     return -1;
@@ -580,7 +600,11 @@ int callingOrderRegularInitPass()
     return -1;
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  if( 0 != vvenc_encoder_open( enc, &vvencParams, nullptr, 0 ) )
+#else
   if( 0 != vvenc_encoder_open( enc, &vvencParams ) )
+#endif
   {
     vvenc_encoder_close( enc );
     return -1;
@@ -634,7 +658,11 @@ int callingOrderRegularInit2Pass()
     return -1;
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  if( 0 != vvenc_encoder_open( enc, &vvencParams, nullptr, 0 ) )
+#else
   if( 0 != vvenc_encoder_open( enc, &vvencParams ) )
+#endif
   {
     vvenc_encoder_close( enc );
     return -1;
@@ -714,7 +742,11 @@ int checkSDKDefaultBehaviourRC()
     return -1;
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  if( 0 != vvenc_encoder_open( enc, &vvencParams, nullptr, 0 ) )
+#else
   if( 0 != vvenc_encoder_open( enc, &vvencParams ) )
+#endif
   {
     vvenc_encoder_close( enc );
     return -1;
@@ -892,7 +924,11 @@ static int runEncoder( vvenc_config& c, uint64_t framesToEncode )
   if( nullptr == enc )
     return -1;
 
+#if ENABLE_SPATIAL_SCALABLE
+  if (0 != vvenc_encoder_open( enc, &c, nullptr, 0))
+#else
   if( 0 != vvenc_encoder_open( enc, &c ) )
+#endif
   {
     vvenc_encoder_close( enc );
     return -1;
@@ -1126,7 +1162,11 @@ int inputBufTest( vvencYUVBuffer* pcYuvPicture )
     return -1;
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  if( 0 != vvenc_encoder_open( enc, &vvencParams, nullptr, 0 ) )
+#else
   if( 0 != vvenc_encoder_open( enc, &vvencParams ) )
+#endif
   {
     vvenc_encoder_close( enc );
     return -1;
@@ -1269,7 +1309,11 @@ int invalidldInputBuf( )
     return -1;
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  if( 0 != vvenc_encoder_open( enc, &vvencParams, nullptr, 0 ) )
+#else
   if( 0 != vvenc_encoder_open( enc, &vvencParams ) )
+#endif
   {
     vvenc_encoder_close( enc );
     return -1;

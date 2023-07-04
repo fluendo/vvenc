@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------------
 The copyright in this software is being made available under the Clear BSD
-License, included below. No patent rights, trademark rights and/or 
-other Intellectual Property Rights other than the copyrights concerning 
+License, included below. No patent rights, trademark rights and/or
+other Intellectual Property Rights other than the copyrights concerning
 the Software are granted under this license.
 
 The Clear BSD License
@@ -84,7 +84,7 @@ void setArbitraryWppPattern( const PreCalcValues& pcv, std::vector<int>& ctuAddr
   std::vector<int> x_in_line( pcv.heightInCtus, 0 );
   int x = 0, y = 0, addr = 0;
   int y_top = 0;
-  const int step = stepX; // number of CTUs in x-direction to scan 
+  const int step = stepX; // number of CTUs in x-direction to scan
   ctuAddrMap[addr++] = x++; // first entry (can be omitted)
   while( addr < pcv.sizeInCtus )
   {
@@ -99,7 +99,7 @@ void setArbitraryWppPattern( const PreCalcValues& pcv, std::vector<int>& ctuAddr
       x++;
     }
     x_in_line[y] = x;
-        
+
     y += 1;
 
     if( y >= pcv.heightInCtus )
@@ -229,7 +229,7 @@ void EncSlice::init( const VVEncCfg& encCfg,
   m_ctuTasksDoneCounter = ctuTasksDoneCounter;
   m_syncPicCtx.resize( encCfg.m_entropyCodingSyncEnabled ? pps.getNumTileLineIds() : 0 );
 
-  
+
   const int maxCntRscr = ( encCfg.m_numThreads > 0 ) ? pps.getNumTileLineIds() : 1;
   const int maxCtuEnc  = ( encCfg.m_numThreads > 0 && threadPool ) ? threadPool->numThreads() : 1;
 
@@ -409,6 +409,14 @@ int EncSlice::xGetQPForPicture( const Slice* slice )
     }
     else
     {
+#if ENABLE_SPATIAL_SCALABLE
+      if (slice->nalUnitType == VVENC_NAL_UNIT_CODED_SLICE_IDR_N_LP || slice->nalUnitType == VVENC_NAL_UNIT_CODED_SLICE_CRA)
+      {
+        qp += m_pcEncCfg->m_intraQPOffset;
+      }
+      else
+      {
+#endif
       if( qp != -lumaQpBDOffset )
       {
         const GOPEntry &gopEntry = *(slice->pic->gopEntry);
@@ -420,6 +428,9 @@ int EncSlice::xGetQPForPicture( const Slice* slice )
         int qpOffset = (int)floor( Clip3<double>( 0.0, 3.0, dqpOffset ) );
         qp += qpOffset;
       }
+#if ENABLE_SPATIAL_SCALABLE
+      }
+#endif
     }
 
     if( m_pcEncCfg->m_blockImportanceMapping && !slice->pic->m_picShared->m_ctuBimQpOffset.empty() )
@@ -632,7 +643,7 @@ class CtuTsIterator : public std::iterator<std::forward_iterator_tag, int>
       while( ctuTsAddr < m_endTsAddr )
       {
         ctuTsAddr++;
-        const int ctuRsAddr = ctuTsAddr; 
+        const int ctuRsAddr = ctuTsAddr;
         if( cs.slice->pps->rectSlice
             && ( (ctuRsAddr / pcv.widthInCtus) < startSliceRsRow
               || (ctuRsAddr / pcv.widthInCtus) > endSliceRsRow
@@ -903,7 +914,7 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
           return false;
         else if( ctuPosY > 0 && ctuPosX + 1 < pcv.widthInCtus && processStates[ ctuRsAddr - ctuStride + 1 ] <= CTU_ENCODE && !wppSyncEnabled )
           return false;
-        
+
         if( checkReadyState )
           return true;
 
@@ -957,7 +968,7 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
                 return false;
           }
         }
-        
+
         // ensure all surrounding ctu's are encoded (intra pred requires non-reshaped and unfiltered residual, IBC requires unfiltered samples too)
         // check right with max offset (due to WPP condition above, this implies top-right has been already encoded)
         for( int i = hasTiles ? -!!ctuPosX : checkRight; i <= checkRight; i++ )
@@ -967,7 +978,7 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
         // check bottom right with 1 CTU delay (this is only required for intra pred)
         // at the right picture border this will check the bottom CTU
         const int checkBottomRight = std::min<int>( 1, lastCtuPosXInTile - ctuPosX );
-        if( checkCtuTaskNbBotRgt( pps, ctuPosX, ctuPosY, ctuRsAddr, processStates, CTU_ENCODE, checkBottomRight ) ) 
+        if( checkCtuTaskNbBotRgt( pps, ctuPosX, ctuPosY, ctuRsAddr, processStates, CTU_ENCODE, checkBottomRight ) )
           return false;
 
         if( checkReadyState )
@@ -1007,13 +1018,13 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
     case LF_HOR:
       {
         // ensure horizontal ordering (from top to bottom)
-        if( checkCtuTaskNbTop   ( pps, ctuPosX, ctuPosY, ctuRsAddr, processStates, LF_HOR ) )         
+        if( checkCtuTaskNbTop   ( pps, ctuPosX, ctuPosY, ctuRsAddr, processStates, LF_HOR ) )
           return false;
 
         // ensure vertical loop filter of neighbor ctu's will not modify current residual
         // check top, top-right and right ctu
         // (top, top-right checked implicitly due to ordering check above)
-        if( checkCtuTaskNbRgt   ( pps, ctuPosX, ctuPosY, ctuRsAddr, processStates, RESHAPE_LF_VER ) ) 
+        if( checkCtuTaskNbRgt   ( pps, ctuPosX, ctuPosY, ctuRsAddr, processStates, RESHAPE_LF_VER ) )
           return false;
 
         if( checkReadyState )
@@ -1455,4 +1466,3 @@ void EncSlice::encodeSliceData( Picture* pic )
 } // namespace vvenc
 
 //! \}
-

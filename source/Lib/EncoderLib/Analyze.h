@@ -155,7 +155,11 @@ public:
     PSNRyuv = (MSEyuv == 0) ? MAX_DOUBLE : 10.0 * log10((maxval * maxval) / MSEyuv);
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  std::string printOut ( char cDelim, const ChromaFormat chFmt, const bool printMSEBasedSNR, const bool printSequenceMSE, const bool printHexPsnr, const BitDepths& bitDepths, const int layerId )
+#else
   std::string printOut ( char cDelim, const ChromaFormat chFmt, const bool printMSEBasedSNR, const bool printSequenceMSE, const bool printHexPsnr, const BitDepths &bitDepths )
+#endif
   {
     double dFps     =   m_dFrmRate; //--CFG_KDY
     double dScale   = dFps / 1000 / (double)m_uiNumPic;
@@ -205,8 +209,15 @@ public:
           }
 
           //info.append(prnt("\t------------ "  " ----------"   " -------- "  " -------- "  " --------\n" ));
+#if ENABLE_SPATIAL_SCALABLE
+           info.append(prnt("Average: \t %8d    %c%d"         "%12.4lf  "    "%8.4lf",
+#else
            info.append(prnt("Average: \t %8d    %c "          "%12.4lf  "    "%8.4lf",
+#endif
                  getNumPic(), cDelim,
+#if ENABLE_SPATIAL_SCALABLE
+                 layerId,
+#endif
                  getBits() * dScale,
                  getPsnr(COMP_Y) / getNumPicLossy(COMP_Y) ) );
 
@@ -232,8 +243,15 @@ public:
             info.append(prnt("\n"));
           }
 
+#if ENABLE_SPATIAL_SCALABLE
+          info.append(prnt("From MSE:\t %8d    %c%d"         "%12.4lf  "    "%8.4lf\n",
+#else
           info.append(prnt("From MSE:\t %8d    %c "          "%12.4lf  "    "%8.4lf\n",
+#endif
                  getNumPic(), cDelim,
+#if ENABLE_SPATIAL_SCALABLE
+                 layerId,
+#endif
                  getBits() * dScale,
                  MSEBasedSNR[COMP_Y] ));
         }
@@ -256,8 +274,16 @@ public:
           }
 
           //info.append(prnt("\t------------ "  " ----------"   " -------- "  " -------- "  " --------\n" ));
+#if ENABLE_SPATIAL_SCALABLE
+          info.append(prnt("\t %8d    %c%d"         "%12.4lf  "    "%8.4lf",
+#else
           info.append(prnt("\t %8d    %c "          "%12.4lf  "    "%8.4lf",
+#endif
                  getNumPic(), cDelim,
+
+#if ENABLE_SPATIAL_SCALABLE
+                 layerId,
+#endif
                  getBits() * dScale,
                  getPsnr(COMP_Y) / getNumPicLossy(COMP_Y) ) );
 
@@ -317,8 +343,15 @@ public:
             }
 
             //info.append(prnt("\t------------ "  " ----------"   " -------- "  " -------- "  " --------\n" ));
+#if ENABLE_SPATIAL_SCALABLE
+            info.append(prnt("Average: \t %8d    %c%d"         "%12.4lf  "    "%8.4lf  "   "%8.4lf  "    "%8.4lf  "   "%8.4lf",
+#else
             info.append(prnt("Average: \t %8d    %c "          "%12.4lf  "    "%8.4lf  "   "%8.4lf  "    "%8.4lf  "   "%8.4lf",
+#endif
                    getNumPic(), cDelim,
+#if ENABLE_SPATIAL_SCALABLE
+                 layerId,
+#endif
                    getBits() * dScale,
                    getPsnr(COMP_Y ) / getNumPicLossy(COMP_Y),
                    getPsnr(COMP_Cb) / getNumPicLossy(COMP_Cb),
@@ -357,8 +390,15 @@ public:
               info.append(prnt("\n"));
             }
 
+#if ENABLE_SPATIAL_SCALABLE
+            info.append(prnt("From MSE:\t %8d    %c%d"         "%12.4lf  "    "%8.4lf  "   "%8.4lf  "    "%8.4lf  "   "%8.4lf\n",
+#else
             info.append(prnt("From MSE:\t %8d    %c "          "%12.4lf  "    "%8.4lf  "   "%8.4lf  "    "%8.4lf  "   "%8.4lf\n",
+#endif
                    getNumPic(), cDelim,
+#if ENABLE_SPATIAL_SCALABLE
+                   layerId,
+#endif
                    getBits() * dScale,
                    MSEBasedSNR[COMP_Y ],
                    MSEBasedSNR[COMP_Cb],
@@ -387,8 +427,15 @@ public:
             }
 
             //info.append(prnt("\t------------ "  " ----------"   " -------- "  " -------- "  " --------\n" ));
+#if ENABLE_SPATIAL_SCALABLE
+            info.append(prnt("\t %8d    %c%d"         "%12.4lf  "    "%8.4lf  "   "%8.4lf  "    "%8.4lf  "   "%8.4lf",
+#else
             info.append(prnt("\t %8d    %c "          "%12.4lf  "    "%8.4lf  "   "%8.4lf  "    "%8.4lf  "   "%8.4lf",
+#endif
                    getNumPic(), cDelim,
+#if ENABLE_SPATIAL_SCALABLE
+                   layerId,
+#endif
                    getBits() * dScale,
                    getPsnr(COMP_Y ) / getNumPicLossy(COMP_Y),
                    getPsnr(COMP_Cb) / getNumPicLossy(COMP_Cb),
