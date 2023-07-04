@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------------
 The copyright in this software is being made available under the Clear BSD
-License, included below. No patent rights, trademark rights and/or 
-other Intellectual Property Rights other than the copyrights concerning 
+License, included below. No patent rights, trademark rights and/or
+other Intellectual Property Rights other than the copyrights concerning
 the Software are granted under this license.
 
 The Clear BSD License
@@ -124,7 +124,11 @@ class GOPCfg
     void getNextGopEntry( GOPEntry& gopEntry );
     void startIntraPeriod( GOPEntry& gopEntry );
     void fixStartOfLastGop( GOPEntry& gopEntry ) const;
+#if ENABLE_SPATIAL_SCALABLE
+    void getDefaultRPLLists( RPLList& rpl0, RPLList& rpl1, bool _interLayerPresent ) const;
+#else
     void getDefaultRPLLists( RPLList& rpl0, RPLList& rpl1 ) const;
+#endif
 
     int  getMaxTLayer() const                             { return m_maxTid; }
     const std::vector<int>& getMaxDecPicBuffering() const { return m_maxDecPicBuffering; }
@@ -161,4 +165,3 @@ class GOPCfg
 } // namespace vvenc
 
 //! \}
-
