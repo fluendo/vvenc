@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------------
 The copyright in this software is being made available under the Clear BSD
-License, included below. No patent rights, trademark rights and/or 
-other Intellectual Property Rights other than the copyrights concerning 
+License, included below. No patent rights, trademark rights and/or
+other Intellectual Property Rights other than the copyrights concerning
 the Software are granted under this license.
 
 The Clear BSD License
@@ -100,7 +100,11 @@ protected:
 
 protected:
   void xWeightedAverage       ( const CodingUnit& cu, const CPelUnitBuf& pcYuvSrc0, const CPelUnitBuf& pcYuvSrc1, PelUnitBuf& pcYuvDst, const bool bdofApplied, PelUnitBuf *yuvPredTmp = NULL );
+#if ENABLE_SPATIAL_SCALABLE
+  void xPredAffineBlk         ( const ComponentID compID, const CodingUnit& cu, const Picture* refPic, const Mv* _mv, PelUnitBuf& dstPic, const bool bi, const ClpRng& clpRng, const RefPicList refPicList = REF_PIC_LIST_X, const std::pair<int, int> scalingRatio = SCALE_1X);
+#else
   void xPredAffineBlk         ( const ComponentID compID, const CodingUnit& cu, const Picture* refPic, const Mv* _mv, PelUnitBuf& dstPic, const bool bi, const ClpRng& clpRng, const RefPicList refPicList = REF_PIC_LIST_X);
+#endif
   void xPredInterBlk( const ComponentID compID, const CodingUnit& cu, const Picture* refPic, const Mv& _mv, PelUnitBuf& dstPic, const bool bi, const ClpRng& clpRng
                               , const bool bdofApplied
                               , const bool isIBC
@@ -110,7 +114,13 @@ protected:
                               , const bool bilinearMC = false
                               , const Pel* srcPadBuf = NULL
                               , const int32_t srcPadStride = 0
+#if ENABLE_SPATIAL_SCALABLE
+                              , const std::pair<int, int> scalingRatio = SCALE_1X
+#endif
                               );
+#if ENABLE_SPATIAL_SCALABLE
+  bool xPredInterBlkRPR(const std::pair<int, int>& scalingRatio, const PPS& pps, const CompArea& blk, const Picture* refPic, const Mv& mv, Pel* dst, const int dstStride, const bool bi, const bool wrapRef, const ClpRng& clpRng, const int filterIndex, const bool useAltHpelIf = false);
+#endif
 
 public:
   InterPredInterpolation();
@@ -157,7 +167,7 @@ protected:
 private:
   PelStorage   m_yuvPred[NUM_REF_PIC_LIST_01];
   bool         m_subPuMC;
-  PelStorage   m_geoPartBuf[2]; 
+  PelStorage   m_geoPartBuf[2];
   int          m_IBCBufferWidth;
   PelStorage   m_IBCBuffer;
   void xIntraBlockCopyIBC       ( CodingUnit& cu, PelUnitBuf& predBuf, const ComponentID compID );
@@ -188,4 +198,3 @@ public:
 } // namespace vvenc
 
 //! \}
-

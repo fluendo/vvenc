@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------------
 The copyright in this software is being made available under the Clear BSD
-License, included below. No patent rights, trademark rights and/or 
-other Intellectual Property Rights other than the copyrights concerning 
+License, included below. No patent rights, trademark rights and/or
+other Intellectual Property Rights other than the copyrights concerning
 the Software are granted under this license.
 
 The Clear BSD License
@@ -84,6 +84,10 @@ private:
   bool             m_isLead;
   bool             m_isTrail;
   bool             m_ctsValid;
+#if ENABLE_SPATIAL_SCALABLE
+  int              m_layerId;
+  int              m_ctuSize;
+#endif
 
 public:
   PicShared()
@@ -102,6 +106,10 @@ public:
   , m_isLead        ( false )
   , m_isTrail       ( false )
   , m_ctsValid      ( false )
+#if ENABLE_SPATIAL_SCALABLE
+  , m_layerId    ( -1 )
+  , m_ctuSize    ( -1 )
+#endif
   {
     std::fill_n( m_prevShared, NUM_QPA_PREV_FRAMES, nullptr );
     std::fill_n( m_minNoiseLevels, QPA_MAX_NOISE_LEVELS, 255u );
@@ -119,6 +127,9 @@ public:
   ChromaFormat getChromaFormat() const { return m_origBuf.chromaFormat; }
   Size         getLumaSize()     const { return m_origBuf.Y(); }
 
+#if ENABLE_SPATIAL_SCALABLE
+  int          getLayerId()      const { return m_layerId; }
+#endif
   void create( int maxFrames, ChromaFormat chromaFormat, const Size& size, bool useFilter )
   {
     CHECK( m_refCount >= 0, "PicShared already created" );
@@ -130,7 +141,11 @@ public:
     m_origBuf.create( chromaFormat, Area( Position(), size ), 0, padding );
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  void reuse( int poc, const vvencYUVBuffer* yuvInBuf, int layerId )
+#else
   void reuse( int poc, const vvencYUVBuffer* yuvInBuf )
+#endif
   {
     CHECK( m_refCount < 0, "PicShared not created" );
     CHECK( isUsed(),       "PicShared still in use" );
@@ -156,6 +171,9 @@ public:
     std::fill_n( m_minNoiseLevels, QPA_MAX_NOISE_LEVELS, 255u );
     m_picSpVisAct[CH_L] = m_picSpVisAct[CH_C] = 0;
     m_gopEntry.setDefaultGOPEntry();
+#if ENABLE_SPATIAL_SCALABLE
+    m_layerId     = layerId;
+#endif
   }
 
   void shareData( Picture* pic )
@@ -172,6 +190,9 @@ public:
     pic->poc            = m_poc;
     pic->cts            = m_cts;
     pic->ctsValid       = m_ctsValid;
+#if ENABLE_SPATIAL_SCALABLE
+    pic->layerId     = m_layerId;
+#endif
     pic->gopEntry       = &m_gopEntry;
     incUsed();
   }
@@ -217,7 +238,11 @@ class EncStage
 {
 private:
   EncStage* m_nextStage        { nullptr };
+#if ENABLE_SPATIAL_SCALABLE
+  PicList*  m_procList         { nullptr };
+#else
   PicList   m_procList         { };
+#endif
   PicList   m_freeList         { };
   int       m_minQueueSize     { 0 };
   int       m_startPoc         { 0 };
@@ -227,6 +252,9 @@ private:
   int       m_ctuSize          { MAX_CU_SIZE };
   bool      m_isNonBlocking    { false };
   bool      m_flush            { false };
+#if ENABLE_SPATIAL_SCALABLE
+  bool      m_shared           { false };
+#endif
 
 protected:
   int       m_picCount         { 0 };
@@ -239,6 +267,11 @@ public:
   virtual ~EncStage()
   {
     freePicList();
+#if ENABLE_SPATIAL_SCALABLE
+    if ( !m_shared ) {
+      delete m_procList;
+    }
+#endif
   };
 
 protected:
@@ -250,12 +283,20 @@ public:
 
   void freePicList()
   {
+#if ENABLE_SPATIAL_SCALABLE
+    for( auto pic : *m_procList )
+#else
     for( auto pic : m_procList )
+#endif
     {
       pic->destroy( true );
       delete pic;
     }
+#if ENABLE_SPATIAL_SCALABLE
+    m_procList->clear();
+#else
     m_procList.clear();
+#endif
     for( auto pic : m_freeList )
     {
       pic->destroy( true );
@@ -264,10 +305,18 @@ public:
     m_freeList.clear();
   }
 
+#if ENABLE_SPATIAL_SCALABLE
+  bool isStageDone() const { return m_procList->empty(); }
+#else
   bool isStageDone() const   { return m_procList.empty(); }
+#endif
   bool isNonBlocking() const { return m_isNonBlocking; }
 
+#if ENABLE_SPATIAL_SCALABLE
+  void initStage( const VVEncCfg& encCfg, int minQueueSize, int startPoc, bool processLeadTrail, bool sortByPoc, int ctuSize, bool nonBlocking = false, PicList* sharedPicList = nullptr )
+#else
   void initStage( const VVEncCfg& encCfg, int minQueueSize, int startPoc, bool processLeadTrail, bool sortByPoc, bool nonBlocking )
+#endif
   {
     CHECK( processLeadTrail && ! sortByPoc, "sort by coding number only for non lead trail pics supported" );
     m_minQueueSize     = minQueueSize;
@@ -276,6 +325,16 @@ public:
     m_sortByPoc        = sortByPoc;
     m_ctuSize          = encCfg.m_CTUSize;
     m_isNonBlocking    = nonBlocking;
+#if ENABLE_SPATIAL_SCALABLE
+    if (sharedPicList) {
+      m_procList = sharedPicList;
+      m_shared = true;
+    }
+    else {
+      m_procList = new PicList();
+      m_shared = false;
+    }
+#endif
   }
 
   void linkNextStage( EncStage* nextStage )
@@ -304,8 +363,22 @@ public:
     Picture* pic                    = nullptr;
     if( m_freeList.size() )
     {
+#if ENABLE_SPATIAL_SCALABLE
+      for (const auto& freePic : m_freeList) {
+        if (freePic->layerId == picShared->getLayerId()) {
+          pic = freePic;
+          m_freeList.remove(freePic);
+          break;
+        }
+      }
+      if (!pic) {
+        pic = new Picture();
+        pic->create(chromaFormat, lumaSize, m_ctuSize, m_ctuSize + 16, false);
+      }
+#else
       pic = m_freeList.front();
       m_freeList.pop_front();
+#endif
     }
     else
     {
@@ -325,7 +398,11 @@ public:
     PicList::iterator picItr;
     if( m_sortByPoc )
     {
+#if ENABLE_SPATIAL_SCALABLE
+      for( picItr = m_procList->begin(); picItr != m_procList->end(); picItr++ )
+#else
       for( picItr = m_procList.begin(); picItr != m_procList.end(); picItr++ )
+#endif
       {
         if( pic->poc < ( *picItr )->poc )
           break;
@@ -333,7 +410,11 @@ public:
     }
     else
     {
+#if ENABLE_SPATIAL_SCALABLE
+      for( picItr = m_procList->begin(); picItr != m_procList->end(); picItr++ )
+#else
       for( picItr = m_procList.begin(); picItr != m_procList.end(); picItr++ )
+#endif
       {
         CHECK( ! pic->gopEntry->m_isValid, "try to sort picture by invalid gop entry" );
         if( pic->gopEntry->m_codingNum < ( *picItr )->gopEntry->m_codingNum )
@@ -347,14 +428,22 @@ public:
     pic->isFlush = flush;
     if( m_isNonBlocking && pic->isFlush )
     {
+#if ENABLE_SPATIAL_SCALABLE
+      for( PicList::iterator cpyItr = picItr; cpyItr != m_procList->end(); cpyItr++ )
+#else
       for( PicList::iterator cpyItr = picItr; cpyItr != m_procList.end(); cpyItr++ )
+#endif
       {
         CHECK( ( *cpyItr )->isInitDone, "set flush signal on a picture for which the coding process has already started" );
         ( *cpyItr )->isFlush = true;
       }
     }
 
+#if ENABLE_SPATIAL_SCALABLE
+    m_procList->insert( picItr, pic );
+#else
     m_procList.insert( picItr, pic );
+#endif
     m_picCount++;
   }
 
@@ -367,21 +456,35 @@ public:
       {
         // assume blocking stages are at the front and behave deterministically with respect to the input YUV pictures
         // therefore mark all pictures in blocking stages as "have seen flush signal"
+#if ENABLE_SPATIAL_SCALABLE
+        for( auto pic : *m_procList )
+#else
         for( auto pic : m_procList )
+#endif
           pic->isFlush = true;
       }
       else
       {
         // for the non-blocking stage, mark at least the last picture in coding order as "have seen flush signal"
+#if ENABLE_SPATIAL_SCALABLE
+        if( ! m_procList->empty() )
+          m_procList->back()->isFlush = true;
+#else
         if( ! m_procList.empty() )
           m_procList.back()->isFlush = true;
+#endif
       }
       m_flush = true;
     }
 
     // ready to go?
+#if ENABLE_SPATIAL_SCALABLE
+    if( ( (int)m_procList->size() >= m_minQueueSize)
+        || ( m_procList->size() && flush ) )
+#else
     if( ( (int)m_procList.size() >= m_minQueueSize )
         || ( m_procList.size() && flush ) )
+#endif
     {
       // process always one picture or all if encoder should be flushed
       do
@@ -389,7 +492,11 @@ public:
         // process pictures
         PicList doneList;
         PicList freeList;
+#if ENABLE_SPATIAL_SCALABLE
+        processPictures( *m_procList, auList, doneList, freeList );
+#else
         processPictures( m_procList, auList, doneList, freeList );
+#endif
 
         // send processed/finalized pictures to next stage
         for( auto pic : doneList )
@@ -412,10 +519,18 @@ public:
           PicShared* picShared = pic->m_picShared;
           picShared->releaseShared( pic );
           // remove pic from own processing queue
+#if ENABLE_SPATIAL_SCALABLE
+          m_procList->remove( pic );
+#else
           m_procList.remove( pic );
+#endif
           m_freeList.push_back( pic );
         }
+#if ENABLE_SPATIAL_SCALABLE
+      } while (0);
+#else
       } while( m_flushAll && flush && m_procList.size() );
+#endif
     }
   }
 };
@@ -423,4 +538,3 @@ public:
 } // namespace vvenc
 
 //! \}
-
