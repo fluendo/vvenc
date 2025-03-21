@@ -233,6 +233,50 @@ void SEIEncoder::initDecodedPictureHashSEI( SEIDecodedPictureHash& dphSei, const
   }
 }
 
+void SEIEncoder::initAlphaChannelSEI( SEIMessages& seiMessages, const Slice *slice )
+{
+#if ENABLE_SPATIAL_SCALABLE
+  // Alpha channel signalling depends on both SEI messages: sdi and aci
+  if (!(m_pcEncCfg->m_scalabilityDimensionInfoSEIEnabled && m_pcEncCfg->m_alphaChannelInfoSEIEnabled))
+  {
+    return;
+  }
+
+  CHECK( m_pcEncCfg->m_maxLayers != 2, "Writing Alpha Channel should have two layers" );
+  SEIScalabilityDimensionInfo *scalabityDimensionInfo = new SEIScalabilityDimensionInfo();
+  scalabityDimensionInfo->sdiMaxLayersMinus1 = slice->vps->maxLayers - 1;
+  scalabityDimensionInfo->sdiMultiviewInfoFlag = 0;
+  scalabityDimensionInfo->sdiAuxiliaryInfoFlag = 1;
+
+  scalabityDimensionInfo->sdiLayerId.resize(scalabityDimensionInfo->sdiMaxLayersMinus1+1);
+  scalabityDimensionInfo->sdiViewIdVal.resize(scalabityDimensionInfo->sdiMaxLayersMinus1+1);
+  scalabityDimensionInfo->sdiAuxId.resize(scalabityDimensionInfo->sdiMaxLayersMinus1+1);
+  scalabityDimensionInfo->sdiNumAssociatedPrimaryLayersMinus1.resize(scalabityDimensionInfo->sdiMaxLayersMinus1+1);
+  scalabityDimensionInfo->sdiAssociatedPrimaryLayerIdx.resize(scalabityDimensionInfo->sdiMaxLayersMinus1+1);
+
+  scalabityDimensionInfo->sdiLayerId[0] = 0;  /* Layer 1 - 1 */
+  scalabityDimensionInfo->sdiAuxId[0] = 0;    /* Nothing */
+
+  scalabityDimensionInfo->sdiLayerId[1] = 1;  /* Layer 1 - 1 */
+  scalabityDimensionInfo->sdiAuxId[1] = 1;    /* Alpha */
+  scalabityDimensionInfo->sdiNumAssociatedPrimaryLayersMinus1[1] = 0;
+  std::vector<u_int32_t> ref_layer = {0};
+  scalabityDimensionInfo->sdiAssociatedPrimaryLayerIdx[1] = ref_layer;
+  seiMessages.push_back(scalabityDimensionInfo);
+
+  SEIAlphaChannelInfo *alphaInfoSEI = new SEIAlphaChannelInfo();
+  alphaInfoSEI->alphaChannelCancelFlag = false;
+  alphaInfoSEI->alphaChannelUseIdc = 1;
+  alphaInfoSEI->alphaChannelBitDepthMinus8 = slice->sps->bitDepths[CH_L] - 8;
+  alphaInfoSEI->alphaTransparentValue = 0;
+  alphaInfoSEI->alphaOpaqueValue = slice->sps->bitDepths[CH_L] == 8?255:1024;
+  alphaInfoSEI->alphaChannelIncrFlag = 0;
+  alphaInfoSEI->alphaChannelClipFlag = 0;
+  alphaInfoSEI->alphaChannelClipTypeFlag = 0;
+  seiMessages.push_back(alphaInfoSEI);
+#endif
+}
+
 void SEIEncoder::initPictureTimingSEI( SEIMessages& seiMessages, SEIMessages& nestedSeiMessages, SEIMessages& duInfoSeiMessages, const Slice *slice, const uint32_t numDU, const bool bpPresentInAU)
 {
   // Picture timing depends on buffering period. When either of those is not disabled,

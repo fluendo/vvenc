@@ -3080,6 +3080,11 @@ void EncGOP::xWriteLeadingSEIs( const Picture& pic, AccessUnitList& accessUnit )
     bpPresentInAU = true;
   }
 
+  if (m_pcEncCfg->m_scalabilityDimensionInfoSEIEnabled && m_pcEncCfg->m_alphaChannelInfoSEIEnabled)
+  {
+    m_seiEncoder.initAlphaChannelSEI( leadingSeiMessages, slice );
+  }
+
 //  if (m_pcEncCfg->m_dependentRAPIndicationSEIEnabled && slice->isDRAP )
 //  {
 //    SEIDependentRAPIndication *dependentRAPIndicationSEI = new SEIDependentRAPIndication();

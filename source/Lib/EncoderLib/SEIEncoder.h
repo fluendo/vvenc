@@ -81,6 +81,7 @@ public:
   void initBufferingPeriodSEI     ( SEIBufferingPeriod& bpSei, bool noLeadingPictures);
   void initPictureTimingSEI       ( SEIMessages& seiMessages, SEIMessages& nestedSeiMessages, SEIMessages& duInfoSeiMessages, const Slice *slice, const uint32_t numDU, const bool bpPresentInAU);
   void initDrapSEI                ( SEIDependentRAPIndication& drapSei) {};
+  void initAlphaChannelSEI        ( SEIMessages& seiMessages, const Slice *slice );
 
   void initSEIAlternativeTransferCharacteristics(SEIAlternativeTransferCharacteristics *seiAltTransCharacteristics);
   void initSEIMasteringDisplayColourVolume(SEIMasteringDisplayColourVolume *seiMDCV);

@@ -1015,6 +1015,10 @@ int parse( int argc, char* argv[], vvenc_config* c, std::ostream& rcOstr )
     ("SEIBufferingPeriod",                              c->m_bufferingPeriodSEIEnabled,                      "Control generation of buffering period SEI messages")
     ("SEIPictureTiming",                                c->m_pictureTimingSEIEnabled,                        "Control generation of picture timing SEI messages")
     ("SEIDecodingUnitInfo",                             c->m_decodingUnitInfoSEIEnabled,                     "Control generation of decoding unit information SEI message.")
+#if ENABLE_SPATIAL_SCALABLE
+    ("SEIAlphaChannel",                                 c->m_alphaChannelInfoSEIEnabled,                     "Control generation of alpha channel SEI message.")
+    ("SEIScalabityDimension",                           c->m_scalabilityDimensionInfoSEIEnabled,             "Control generation of scalability dimension SEI message.")
+#endif
     ("EnableDecodingParameterSet",                      c->m_decodingParameterSetEnabled,                    "Enable writing of Decoding Parameter Set")
     ("AccessUnitDelimiter,-aud",                        toAud,                                               "Enable Access Unit Delimiter NALUs, (default: auto - enable only if needed by dependent options)" , true)
     ("VuiParametersPresent,-vui",                       toVui,                                               "Enable generation of vui_parameters(), (default: auto - enable only if needed by dependent options)", true)

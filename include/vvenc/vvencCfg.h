@@ -557,6 +557,10 @@ typedef struct vvenc_config
   bool                m_bufferingPeriodSEIEnabled;
   bool                m_pictureTimingSEIEnabled;
   bool                m_decodingUnitInfoSEIEnabled;
+#if ENABLE_SPATIAL_SCALABLE
+  bool                m_alphaChannelInfoSEIEnabled;
+  bool                m_scalabilityDimensionInfoSEIEnabled;
+#endif
 
   int8_t              m_entropyCodingSyncEnabled;
   bool                m_entryPointsPresent;
