@@ -2242,7 +2242,7 @@ void  HLSWriter::codeProfileTierLevel    ( const ProfileTierLevel* ptl, bool pro
 
   WRITE_CODE( (uint32_t)ptl->levelIdc, 8 ,            "general_level_idc");
   WRITE_FLAG( ptl->frameOnlyConstraintFlag,           "ptl_frame_only_constraint_flag" );
-  WRITE_FLAG( ptl->multiLayerEnabledFlag,             "ptl_multilayer_enabled_flag"    );
+  WRITE_FLAG( 0,             "ptl_multilayer_enabled_flag"    );
   if(profileTierPresent)
   {
     codeConstraintInfo( &ptl->constraintInfo );

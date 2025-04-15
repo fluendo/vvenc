@@ -914,6 +914,8 @@ VVENC_DECL bool vvenc_init_config_parameter( vvenc_config *c )
         c->m_profile=vvencProfile::VVENC_MAIN_10;
       }
 #endif
+      std::cout << "Profile is " << c->m_profile << std::endl;
+      c->m_profile = vvencProfile::VVENC_MAIN_10;
     }
     else if (c->m_internChromaFormat==vvencChromaFormat::VVENC_CHROMA_422 || c->m_internChromaFormat==vvencChromaFormat::VVENC_CHROMA_444)
     {
